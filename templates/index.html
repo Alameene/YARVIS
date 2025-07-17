@@ -1,52 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>YARVIS-AI Chatbot</title>
-    <link rel="stylesheet" href="/static/styles.css">
+  <meta charset="UTF-8">
+  <title>YARVIS – Your AI Assistant</title>
+  <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <div class="chat-container">
-        <div id="chat-box" class="chat-box"></div>
-        <div class="input-area">
-            <input type="text" id="userInput" placeholder="Ask YARVIS something..." />
-            <button onclick="sendMessage()">➤</button>
-        </div>
+  <div class="chat-container">
+    <div class="chat-heade">YARVIS</div>
+
+    <div id="chat-box" class="chat-box"></div>
+
+    <div class="input-area">
+      <input type="text" id="userInput" placeholder="Ask me anything..." />
+      <button onclick="sendMessage()">➤</button>
     </div>
+  </div>
 
-    <audio id="audio" hidden></audio>
+  <audio id="audio" hidden></audio>
 
-    <script>
-        async function sendMessage() {
-            const input = document.getElementById("userInput");
-            const message = input.value.trim();
-            if (!message) return;
+  <script>
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const message = input.value.trim();
+      if (!message) return;
 
-            appendMessage("You", message, "user");
-            input.value = "";
+      appendMessage("You", message, "user");
+      input.value = "";
 
-            const res = await fetch('/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message })
-            });
+      appendMessage("YARVIS", "Typing...", "bot", true);
 
-            const data = await res.json();
-            appendMessage("YARVIS", data.reply, "bot");
+      const response = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      });
 
-            const audio = document.getElementById("audio");
-            audio.src = data.audio_url;
-            audio.play();
-        }
+      const data = await response.json();
+      updateLastBotBubble(data.reply);
 
-        function appendMessage(sender, text, type) {
-            const chatBox = document.getElementById("chat-box");
-            const bubble = document.createElement("div");
-            bubble.className = type === "user" ? "bubble user" : "bubble bot";
-            bubble.innerHTML = `<strong>${sender}:</strong> ${text}`;
-            chatBox.appendChild(bubble);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-    </script>
+      const audio = document.getElementById("audio");
+      audio.src = data.audio_url;
+      audio.play();
+    }
+
+    function appendMessage(sender, text, type, isTemp = false) {
+      const chatBox = document.getElementById("chat-box");
+      const bubble = document.createElement("div");
+      bubble.className = `bubble ${type}`;
+      bubble.innerHTML = `<strong>${sender}:</strong> <span class="text">${text}</span>`;
+      if (isTemp) bubble.classList.add("typing");
+      chatBox.appendChild(bubble);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function updateLastBotBubble(newText) {
+      const last = document.querySelector(".bubble.bot.typing .text");
+      if (last) {
+        last.innerHTML = "";
+        let i = 0;
+        const interval = setInterval(() => {
+          if (i < newText.length) {
+            last.innerHTML += newText.charAt(i);
+            i++;
+          } else {
+            clearInterval(interval);
+          }
+        }, 25);
+        document.querySelector(".bubble.bot.typing").classList.remove("typing");
+      }
+    }
+  </script>
 </body>
 </html>
